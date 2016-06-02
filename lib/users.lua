@@ -52,8 +52,20 @@ function Users:registerAll(serverID)
 
 end
 
---return the unique client id
-function Users:getUserByID(serverID, id)
+--return the clientID from uniqueID
+function Users:getID(serverID, uniqueID)
+	local serverHash = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+
+	for k, v in next, bot.clients[serverHash] do		
+		if v.uniqueID == uniqueID then
+			return v
+		end
+	end
+	return nil
+end
+
+--return the clientID from uniqueID
+function Users:getUniqueID(serverID, id)
 	local serverHash = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
 
 	for k, v in next, bot.clients[serverHash] do		
@@ -67,7 +79,7 @@ end
 --events
 function Users:onClientMoveEvent(serverID, clientID, oldChannelID, newChannelID, visibility, moveMessage)
 
-	local data = self:getUserByID(serverID, clientID)
+	local data = self:getID(serverID, clientID)
 
 	if visibility == 0 then
 		data = self:addUser(serverID, clientID)
