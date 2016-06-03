@@ -31,9 +31,9 @@ function util.getChannelClients(cid)
 	return cl
 end
 
-function util.getChannelClientIds()
-	local chan = util.getOwnChannel()
-	return ts3.getChannelClientList(ts3.getCurrentServerConnectionHandlerID(), chan)
+function util.getChannelClientIds(serverID)
+	local chan = util.getOwnChannel(serverID)
+	return ts3.getChannelClientList(serverID, chan)
 end
 
 function util.moveToChannel(serverID, clientID)
@@ -159,86 +159,12 @@ function util.getServerHash(serverID)
 	return ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
 end
 
-function table.count(tab)
-	local i = 0
-	for k,v in pairs(tab) do
-		i = i + 1
-	end
-	return i
-end
-
-function table.removeKey(t, k)
-	local i = 0
-	local keys, values = {},{}
-	for k,v in pairs(t) do
-		i = i + 1
-		keys[i] = k
-		values[i] = v
-	end
- 
-	while i>0 do
-		if keys[i] == k then
-			table.remove(keys, i)
-			table.remove(values, i)
-			break
-		end
-		i = i - 1
-	end
- 
-	local a = {}
-	for i = 1,#keys do
-		a[keys[i]] = values[i]
-	end
- 
-	return a
-end
--- function urlencode(str)
-	-- if (str) then
-		-- str = string.gsub (str, "\n", "\r\n")
-		-- str = string.gsub (str, "([^%w %-%_%.%~])",
-		-- function (c) return string.format ("%%%02X", string.byte(c)) end)
-		-- str = string.gsub (str, " ", "+")
-	-- end
-	-- return str
--- end
-
 function urlencode(str)
 	str = string.gsub (str, "\n", "\r\n")
 	str = string.gsub (str, "([^0-9a-zA-Z ])", -- locale independent
 			function (c) return string.format ("%%%02X", string.byte(c)) end)
 	str = string.gsub (str, " ", "+")
 	return str
-end
-
--- function PrintTable( t, indent, done )
---     done = done or {}
---     indent = indent or 0
---     local output = ""
-
---     for key, value in pairs( t ) do
---         if type( value ) == "table" and not done[value] then
---             done [value] = true
---             output = output .. tostring ( key ) .. ":" .. PrintTable( value, indent + 2, done )
---         else
---             output = output .. tostring ( key ) .. "    =    " .. tostring( value ) .. "\n"
---         end
---     end
---     log(output)
--- 	print(output)
--- end
-
-function table.GetKeys( tab )
-
-	local keys = {}
-	local id = 1
-
-	for k, v in pairs( tab ) do
-		keys[ id ] = k
-		id = id + 1
-	end
-
-	return keys
-
 end
 
 function PrintTable( t, indent, done )
@@ -281,15 +207,6 @@ end
 
 function log(msg)
 	ts3.printMessageToCurrentTab(msg)
-end
-
-function table.random( t )
-	local rk = math.random( 1, #t )
-	local i = 1
-	for k, v in pairs( t ) do 
-		if ( i == rk ) then return v, k end
-		i = i + 1 
-	end
 end
 
 function util.lineBar(val, max, color, width)
@@ -350,10 +267,27 @@ function util.barGraph(arr)
 	return str
 end
 
-function table.size(tab)
-	local i = 0
-	for _, v in next, tab do
-		i = i + 1
-	end
-	return i
+function util.exec(cmd)
+	local stream = io.popen(cmd)
+	local stdout = stream:read("*all")
+	stream:close()
+	return stdout
+end
+
+--is* methods
+
+function istable(val)
+	return type(val) == "table"
+end
+
+function isnumber(val)
+	return type(val) == "number"
+end
+
+function isstring(val)
+	return type(val) == "string"
+end
+
+function isfunction(val)
+	return type(val) == "function"
 end

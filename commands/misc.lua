@@ -1,5 +1,5 @@
 command.add("test", function(self, from, args)
-	log("   THIS HAS A TAB?")
+	print("TEST: " .. tostring(api))
 
 	local _T = {
 		a = "one",
@@ -14,7 +14,7 @@ command.add("test", function(self, from, args)
 		}
 	}
 
-	PrintTable(self)
+	PrintTable(_T)
 end).addAlias("one", "two")
 
 command.add("unfollow", function(self, from, args)
@@ -100,6 +100,9 @@ command.add("deop", function(self, from, args)
 	if not id then return false end
 	local uid = ts3.getClientVariableAsString(self.sid, id, ts3defs.ClientProperties.CLIENT_UNIQUE_IDENTIFIER)
 	local serverHash = ts3.getServerVariableAsString(self.sid, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+	PrintTable(self.conf.friends[serverHash])
+
+	log(user .. " attempt remove " .. uid .. " on " .. serverHash)
 
 	self:delFriend(serverHash, uid)
 	log(user .. " was removed from my friends list")
@@ -123,11 +126,12 @@ end)
 
 command.add("db", function(self, from, args)
 
-	local databaseID = ts3.getClientVariableAsString(self.sid, from, ts3defs.ClientProperties.CLIENT_DATABASE_ID)
+	local id = util.getUserID(table.concat(args, " "))	
+	local user = util.getUsernameByID(self.sid, id)
 
-	local user = util.getUsernameByID(self.sid, from)
+	local databaseID = ts3.getClientVariableAsString(self.sid, id, ts3defs.ClientProperties.CLIENT_DATABASE_ID)
 
-	self:sendMessage(self.sid, "DBID: " .. databaseID)
+	self:sendMessage(self.sid, user .. " DBID: " .. databaseID)
 
 end)
 
@@ -154,6 +158,32 @@ command.add("info", function(self, from, args)
 	local id = util.getUserID(table.concat(args, " "))	
 	local user = util.getUsernameByID(self.sid, id)
 
+	log("[b]" .. user .. "[/b]")
 	PrintTable(self.users:getDataFromID(self.sid, id))
+
+end)
+
+command.add("kickall", function(self, from, args)
+	local clients = util.getChannelClientIds(self.sid)
+
+	for k,v in pairs(clients) do
+		if v ~= self.myid then
+			ts3.requestClientKickFromChannel(self.sid, v, "GET THE FUCK OUT BITCH!!!") 
+		end
+	end
+
+end)
+
+command.add("v", function(self, from, args)
+	
+	local vol = args[1] or -50
+
+	local clients = util.getChannelClientIds(self.sid)
+
+	for k,v in pairs(clients) do
+		if v ~= self.myid then
+			ts3.setClientVolumeModifier(self.sid, v, vol)
+		end
+	end
 
 end)

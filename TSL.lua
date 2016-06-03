@@ -10,15 +10,23 @@ function TSL.create()
 	self.friends = {}
 	self.conf = {}
 	self.term = false
-
-	self.clients = {}
+	self.loaded = false
+	self.clients = {} -- maybe store this inside of Users class
 
 	self.follow = {}
 
 	self.users = Users.create()
 
 	self:init()
+
 	return self
+end
+
+function TSL:onReload()
+	--called when the plugin is reloaded
+
+	Users:registerAll(self.sid)
+
 end
 
 function TSL:init()
@@ -66,15 +74,8 @@ function TSL:addFriend(sid, tab)
 end
 
 function TSL:delFriend(serverHash, uid)
-	local temp = {}
-	local size = table.size(self.conf.friends[serverHash])
 
-	for k,v in next, self.conf.friends[serverHash] do
-		if k ~= uid then
-			temp[k] = v
-		end
-	end
-	self.conf.friends = temp
+	self.conf.friends[serverHash][uid] = nil
 
 	conf.save()
 	
@@ -90,8 +91,8 @@ function TSL:isFriend(sid, uid)
 end
 
 --events
-
 function TSL:onMessage(sid, toID, fromID, message)
+	hook.call("TestHook", message) -- testing hooks
 
 	local myID = util.getOwnID(sid)
 
@@ -119,11 +120,19 @@ function TSL:onClientMoveEvent(sid, clientID, oldChannelID, newChannelID, visibi
 
 	if visibility == 2 then return false end
 
-	local myid = util.getOwnID()
-	local mychan = util.getOwnChannel()
-	local tab = self.follow[sid]
+	local myid = util.getOwnID(sid)
+	local mychan = util.getOwnChannel(sid)
 	local user = util.getUsernameByID(sid, clientID)
 
+	--[[ enabled when hooks are added 
+	if newChannelID == mychan then
+		ts3.setClientVolumeModifier(self.sid, clientID, -50)
+	elseif oldChannelID == mychan then
+		log("Restoring volume for " .. user .. "!")
+		ts3.setClientVolumeModifier(self.sid, clientID, 0)
+	end ]]	
+
+	local tab = self.follow[sid]
 	if clientID == tab.id and tab.sid == sid then
 		util.moveToChannelID(sid, newChannelID)		
 	end
@@ -157,13 +166,16 @@ end
 
 function TSL:onClientDisconnected(sid, clientData)
 
-	print("Disconnected: " .. clientData.username)
+	-- print("Disconnected: " .. clientData.username)
 
 end
 
 function TSL:onClientConnected(sid, clientData)
-	print("Connected: " .. clientData.username)
+	-- print("Connected: " .. clientData.username)
+
 end
 
-
-
+hook.add("TestHook", "testingHooks", function(data)
+	--hooks working
+	--log("Test hook called: " .. data)
+end)

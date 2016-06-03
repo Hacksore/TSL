@@ -3,10 +3,8 @@ Users.__index = Users
 
 function Users.create()	
 	local self = setmetatable({}, Users)
-
 	return self
 end
-
 
 function Users:addUser(serverID, id)
 	local serverHash = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
@@ -38,6 +36,7 @@ end
 
 function Users:registerAll(serverID)
 
+	-- PrintTable(api)
 	local uid = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
 
 	if api.clients[uid] == nil then

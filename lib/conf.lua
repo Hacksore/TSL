@@ -1,33 +1,28 @@
---grap appdata path for windows
-local stream = io.popen("echo %APPDATA%")
-local appdata = stream:read("*all")
-stream:close()
+--grab appdata path for windows
+local appdata = string.gsub(util.exec("echo %APPDATA%"), "\n", "")
 
 conf = {}
 conf.list = {}
 conf.fileName = string.gsub(appdata .. "/TS3Client/tsl_conf.json", "\n", "")
 
 conf.load = function()
-	local f = io.open(conf.fileName, "r")
-	if not f then
-		local f2 = io.open(conf.fileName, "w")
-		local default = io.open("plugins/lua_plugin/TSL/config.default.json", "r"):read("*all")
 
-		f2:write(default)
-		f2:close()
+	if not file.exists(conf.fileName) then
+		local default = file.read("plugins/lua_plugin/TSL/config.default.json")
+
+		file.write(conf.fileName, default)
 		
 		conf.list = json.decode(default)
 	else	
-		local data = f:read("*all")
-		conf.list = json.decode(data)
-		f:close()
+		conf.list = json.decode(file.read(conf.fileName))
 	end
 
 	return conf.list
+
 end
 
-conf.save = function()
-	local f = io.open(conf.fileName, "w")
-	f:write(json.encode(api.conf))
-	f:close()	
+conf.save = function()	
+
+	file.write(conf.fileName, json.encode(api.conf))
+
 end
