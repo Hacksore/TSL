@@ -27,8 +27,11 @@ api = TSL.create()
 
 --the Lua plugin for whatever reason never implemented this so we need to
 --override this so the client does not have to edit the ts3events file
-local function currentServerConnectionChanged(serverConnectionHandlerID)
+function currentServerConnectionChanged(serverConnectionHandlerID)
+
+	print("SID: " .. serverConnectionHandlerID)
 	api:currentServerConnectionChanged(serverConnectionHandlerID)
+
 end
 
 local function onConnectStatusChangeEvent(serverConnectionHandlerID, status, errorNumber)
@@ -62,7 +65,7 @@ local function createMenus(moduleMenuItemID)
 end
 
 local registeredEvents = {
-	--currentServerConnectionChanged = currentServerConnectionChanged,
+	currentServerConnectionChanged = currentServerConnectionChanged,
 	onTextMessageEvent = onTextMessageEvent,
 	onClientMoveEvent = onClientMoveEvent,
 	onClientMoveMovedEvent = onClientMoveMovedEvent,

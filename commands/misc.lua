@@ -1,5 +1,5 @@
 command.add("test", function(self, from, args)
-	print("TEST: " .. tostring(api))
+	-- print("TEST: " .. tostring(api))
 
 	local _T = {
 		a = "one",
