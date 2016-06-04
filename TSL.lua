@@ -3,7 +3,7 @@ TSL.__index = TSL
 
 function TSL.create()
 	local self = setmetatable({}, TSL)
-	self.version = "0.0.1"
+	self.version = "0.0.2"
 	self.name = "TSL"
 	self.sid = ts3.getCurrentServerConnectionHandlerID()
 	self.myid = util.getOwnID()
@@ -24,18 +24,14 @@ end
 
 function TSL:onReload()
 	--called when the plugin is reloaded
-
+	self.loaded = true
 	Users:registerAll(self.sid)
 
 end
 
-function TSL:init()
-	
-	if not self.loaded  then
-		self.conf = conf.load()
-			
-		self.loaded = true
-	end
+function TSL:init()	
+
+	self.conf = conf.load()
 
 end
 
@@ -81,6 +77,19 @@ function TSL:delFriend(serverHash, uid)
 	
 end
 
+function TSL:isFriendID(sid, clientID)
+	local uid = ts3.getClientVariableAsString(sid, clientID, ts3defs.ClientProperties.CLIENT_UNIQUE_IDENTIFIER)
+	local serverHash = ts3.getServerVariableAsString(sid, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+
+	if self.conf.friends[serverHash] ~= nil then
+		if self.conf.friends[serverHash][uid] ~= nil then
+			return true
+		end
+	end
+	return false
+end
+
+-- TODO: have serverHash lookup happen in here as it makes more sense
 function TSL:isFriend(sid, uid)
 	if self.conf.friends[sid] ~= nil then
 		if self.conf.friends[sid][uid] ~= nil then
@@ -92,15 +101,20 @@ end
 
 --events
 function TSL:onMessage(sid, toID, fromID, message)
-	hook.call("TestHook", message) -- testing hooks
+
+	hook.call("OnMessage", message) -- testing hooks
 
 	local myID = util.getOwnID(sid)
 
-	local args = util.str_split(message, " ")
+	local args = string.Explode(message, " ")
 
-	if args[1]:find("!") == nil then return end
-	
-	local cmd = string.lower(string.gsub(args[1], "!", ""))
+	local prefix = self.conf.commandPrefix	
+
+	local firstChar = string.sub(message, 1, 1)
+
+	if not table.HasValue(prefix, firstChar) then return false end
+
+	local cmd = string.lower(string.sub(args[1], 2))
 
 	local temp = args
 	table.remove(temp, 1)
@@ -108,10 +122,11 @@ function TSL:onMessage(sid, toID, fromID, message)
 	local id = ts3.getServerVariableAsString(sid, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
 	local uniqueID = ts3.getClientVariableAsString(sid, fromID, ts3defs.ClientProperties.CLIENT_UNIQUE_IDENTIFIER)
 
+
 	if not self:isFriend(id, uniqueID) and fromID ~= myID then return false end
 	
 	command.run(cmd, self, fromID, args)
-	
+
 end
 
 function TSL:onClientMoveEvent(sid, clientID, oldChannelID, newChannelID, visibility, moveMessage)
@@ -124,13 +139,10 @@ function TSL:onClientMoveEvent(sid, clientID, oldChannelID, newChannelID, visibi
 	local mychan = util.getOwnChannel(sid)
 	local user = util.getUsernameByID(sid, clientID)
 
-	--[[ enabled when hooks are added 
-	if newChannelID == mychan then
-		ts3.setClientVolumeModifier(self.sid, clientID, -50)
-	elseif oldChannelID == mychan then
-		log("Restoring volume for " .. user .. "!")
-		ts3.setClientVolumeModifier(self.sid, clientID, 0)
-	end ]]	
+	hook.call("OnClientMove", {
+		sid = sid, clientID = clientID, oldChannelID = oldChannelID,
+		newChannelID = newChannelID, visibility = visibility, moveMessage = moveMessage
+	})
 
 	local tab = self.follow[sid]
 	if clientID == tab.id and tab.sid == sid then
@@ -174,8 +186,3 @@ function TSL:onClientConnected(sid, clientData)
 	-- print("Connected: " .. clientData.username)
 
 end
-
-hook.add("TestHook", "testingHooks", function(data)
-	--hooks working
-	--log("Test hook called: " .. data)
-end)

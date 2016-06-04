@@ -1,5 +1,25 @@
 util = {}
 
+--replcae old util.str_split with this garry method
+function string.Explode(str, separator)
+		 
+	local ret = {}
+	local index,lastPosition = 1,1
+	 
+	-- Find the parts
+	for startPosition,endPosition in string.gmatch( str, "()" .. separator.."()" ) do
+		ret[index] = string.sub( str, lastPosition, startPosition-1)
+		index = index + 1
+		 
+		-- Keep track of the position
+		lastPosition = endPosition
+	end
+	 
+	-- Add last part by using the position we stored
+	ret[index] = string.sub( str, lastPosition)
+	return ret
+end
+
 function util.str_split(str, pat)
 	local t = {}  -- NOTE: use {n = 0} in Lua-5.0
 	local fpat = "(.-)" .. pat
@@ -64,19 +84,19 @@ function util.getClientList()
 	return clients
 end
 
-function util.getOwnID(sid)
-	local id = sid and sid or ts3.getCurrentServerConnectionHandlerID()
+function util.isNotMe(serverID, clientID)
+	return util.getOwnID(serverID) ~= clientID
+end
+
+function util.getOwnID(serverID)
+	local id = serverID and serverID or ts3.getCurrentServerConnectionHandlerID()
 	local myClientID, error = ts3.getClientID(id)
-	if error ~= ts3errors.ERROR_ok then
-		return 0
-	elseif myClientID == 0 then
-		return 0
-	end
+
 	return myClientID
 end
 
 function util.getOwnChannel(serverID)
-	return util.getUserChannelID(serverID, util.getOwnID())	
+	return util.getUserChannelID(serverID, util.getOwnID(serverID))	
 end
 
 function util.getUserChannelID(serverID, userID)
@@ -182,18 +202,20 @@ function PrintTable( t, indent, done )
 		local key = keys[ i ]
 		local value = t[ key ]
 
-		local spacing = string.rep( "  ", indent )
+		local spacing = string.rep( "    ", indent )
 
 		if  type(value) == "table" and not done[ value ] then
-
+			local emptyTable = table.Count(value) <= 0 and "{}" or ""
 			done[ value ] = true
-			log( spacing .. tostring( key ) .. " =" )
+
+			log("[b][color=#5f894e]" .. spacing .. "\"" .. tostring( key ) .. "\"" .. " " .. emptyTable .. "[/color][/b]")
+
 			PrintTable ( value, indent + 2, done )
 			done[ value ] = nil
 
 		else
 
-			log( spacing .. tostring( key ) .. " = " .. tostring( value ) )
+			log("[b][color=#5b5b5b]" .. spacing .. tostring( key ) .. " = " .. tostring( value ) .. "[/color][/b]")
 
 		end
 	end

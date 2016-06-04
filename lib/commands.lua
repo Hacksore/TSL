@@ -3,6 +3,7 @@ command.list = {}
 
 command.alias = {}
 
+
 function command.add(name, callback)
 
 	command.list[name] = {
@@ -29,6 +30,7 @@ function command.isAlias(name)
 	return command.alias[name] ~= nil
 end
 
+--TODO: make the callback include clientData instead of just id
 function command.run(name, self, from, args)
 	if command.isAlias(name) then
 		name = command.alias[name]

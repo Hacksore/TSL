@@ -12,9 +12,9 @@ conf.load = function()
 
 		file.write(conf.fileName, default)
 		
-		conf.list = json.decode(default)
+		conf.list = JSON:decode(default)
 	else	
-		conf.list = json.decode(file.read(conf.fileName))
+		conf.list = JSON:decode(file.read(conf.fileName))
 	end
 
 	return conf.list
@@ -23,6 +23,6 @@ end
 
 conf.save = function()	
 
-	file.write(conf.fileName, json.encode(api.conf))
+	file.write(conf.fileName, JSON:encode_pretty(api.conf))
 
 end

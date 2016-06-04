@@ -19,7 +19,7 @@ require("TSL/commands/misc")
 --term hax
 require("TSL/lib/terminal")
 
-json = require("TSL/lib/json")
+JSON = require("TSL/lib/json")
 
 MODULE_NAME = "TSL"
 
@@ -29,7 +29,6 @@ api = TSL.create()
 --override this so the client does not have to edit the ts3events file
 function currentServerConnectionChanged(serverConnectionHandlerID)
 
-	print("SID: " .. serverConnectionHandlerID)
 	api:currentServerConnectionChanged(serverConnectionHandlerID)
 
 end
@@ -38,6 +37,9 @@ local function onConnectStatusChangeEvent(serverConnectionHandlerID, status, err
 	if status == ts3defs.ConnectStatus.STATUS_CONNECTION_ESTABLISHED then
 		--need instantiate the TSL lib
 		api = api or TSL.create()
+
+		hook.call("ClientLoaded", api)
+
 		api:onServerConnection(serverConnectionHandlerID, status, errorNumber)
    	end	
 end
@@ -57,11 +59,26 @@ end
 
 local function onChannelSubscribeFinishedEvent(serverConnectionHandlerID)
 	api:onChannelSubscribeFinishedEvent(serverConnectionHandlerID)
+
+	--i think we might need to call this hook here as well for whatever
+	--reason it erros on client launch with "Failed to call createMenus"
+
+	--only issue with this is resubbing will call this hook again
+	--TODO: look into finding a better method for this
+	hook.call("ClientLoaded", api)
+
 end
 
-local function createMenus(moduleMenuItemID)	
-	api:onReload()
-	return {}		
+local function createMenus(moduleMenuItemID)
+
+	if not api.loaded then		
+		api:onReload()		
+	end
+
+	hook.call("ClientLoaded", api)
+	-- PrintTable(getmetatable(api))
+
+	return {}
 end
 
 local registeredEvents = {
@@ -75,3 +92,5 @@ local registeredEvents = {
 }
 
 ts3RegisterModule(MODULE_NAME, registeredEvents)
+
+

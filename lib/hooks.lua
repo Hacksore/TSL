@@ -1,5 +1,4 @@
 --hooks i guess?
-
 hook = {}
 hook.list = {}
 
@@ -21,12 +20,18 @@ end
 
 function hook.call(hookName, ...)
 
-	local hooks = hook.list[hookName]
+	local args = {...}
+	local hooks = hook.list[hookName] or false
 
-	for k, func in pairs(hooks) do
-		
-		func(...)
+	if not hooks then return false end
 
-	end
+	local retVal = nil
+	table.ForEach(hooks, function(k, v)
 
+		retVal = v(args[1])
+
+	end)
+
+	return retVal
 end
+
