@@ -1,272 +1,118 @@
-command.add("test", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local _T = {
-		a = "one",
-		b = "testing",
-		c = {
-			d = "powa",
-			e = "test",
-			f = {
-				deeper = "yez"
-			}
-
-		}
-	}
-
-	PrintTable(_T)
-
-end).addAlias("one", "two")
-
-command.add("unfollow", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	if self.follow[self.sid] then
-		local user = util.getUsernameByID(self.sid, self.follow[self.sid].id)
-		log("You stopped following " .. user .. "!")
-		self.follow = {}
-		return false
-	end
-
-end).addAlias("uf", "sf")
-
-command.add("follow", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	if #args <= 0 then
-		local user = util.getUsernameByID(self.sid, self.follow[self.sid].id)
-		log("[b]Currently following " .. user .. "![/b]")
-		return false
-	end
-
-	local id = util.getUserID(table.concat(args, " "))	
-	local user = util.getUsernameByID(self.sid, id)
-	if not id then return false end
-	
-	--add this person to the list of people to follow
-	self.follow[self.sid] = {
-		id = id,
-		sid = self.sid
-	}
-
-	--move to channel if not there already
-	if util.getUserChannelID(self.sid, id) ~= util.getUserChannelID(self.sid, self.myid) then
-		local chanID = util.getUserChannelID(self.sid, id)
-		util.moveSelfToChannel(self.sid, chanID)
-	end
-
-	log("Now following " .. user)
-
-end).addAlias("fol", "f")
-
-command.add("c", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local func = loadstring("return " .. table.concat(args, " ") .. "")
-	if func ~= nil then
-		self:sendMessage(self.sid, func())
-	end	
-end)
-
-command.add("lua", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local func = loadstring(table.concat(args, " "))
-	
-	if func ~= nil then
-		func()
-	end	
-
-end)
-
-command.add("op", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local sid = ts3.getServerVariableAsString(self.sid, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
-
-	local id = util.getUserID(table.concat(args, " "))	
-	local user = util.getUsernameByID(self.sid, id)
-
-	if not id then return false end
-	local uid = ts3.getClientVariableAsString(self.sid, id, ts3defs.ClientProperties.CLIENT_UNIQUE_IDENTIFIER)
-
-	local added = self:addFriend(sid, {
-		uid = uid,
-		name = user
-	})
-
-	if added then
-		log("Added " .. user .. " to my friends list")
-	else
-		log(user .. " is already on my friends list")
-	end	
-	
-end)
-
-command.add("deop", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local id = util.getUserID(table.concat(args, " "))	
-	local user = util.getUsernameByID(self.sid, id)
-
-	if not id then return false end
-	local uid = ts3.getClientVariableAsString(self.sid, id, ts3defs.ClientProperties.CLIENT_UNIQUE_IDENTIFIER)
-	local serverHash = ts3.getServerVariableAsString(self.sid, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
-
-	self:delFriend(serverHash, uid)
-	log(user .. " was removed from my friends list")
-	
-end)
-
-command.add("ops", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local sid = ts3.getServerVariableAsString(self.sid, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
-
-	local tmp = {}
-
-	for k,v in pairs(self.conf.friends[sid]) do
-
-		local name = string.gsub(v.name or "test", " ", "%20")
-		local fStr = string.format("[URL=client://0/%s~%s]%s[/URL]", k, name, name)
-		table.insert(tmp, fStr)
-	
-	end	
-	log("[b]" .. table.concat(tmp, "\n") .. "[/b]")
-end)
-
-command.add("db", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local id = util.getUserID(table.concat(args, " "))	
-	local user = util.getUsernameByID(self.sid, id)
-
-	local databaseID = ts3.getClientVariableAsString(self.sid, id, ts3defs.ClientProperties.CLIENT_DATABASE_ID)
-
-	self:sendMessage(self.sid, user .. " DBID: " .. databaseID)
-
-end)
-
-command.add("users", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local serverHash = util.getServerHash(self.sid)
-
-	for k, v in next, self.clients[serverHash] do
-		ts3.requestClientVariables(self.sid, v.clientID)		
-	end
-
-	os.execute("sleep 1")
-
-	for k, v in next, self.clients[serverHash] do
-		local version = ts3.getClientVariableAsString(self.sid, v.clientID, ts3defs.ClientProperties.CLIENT_VERSION)
-		local platform = ts3.getClientVariableAsString(self.sid, v.clientID, ts3defs.ClientProperties.CLIENT_PLATFORM)
-
-		ts3.printMessageToCurrentTab(v.username .. " = " .. platform .. " " .. version)
-	end
-end)
-
-command.add("info", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local id = util.getUserID(table.concat(args, " "))	
-	local user = util.getUsernameByID(self.sid, id)
-
-	log("[b]" .. user .. "[/b]")
-	PrintTable(self.users:getDataFromID(self.sid, id))
-
-end)
-
-command.add("kickall", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local clients = util.getChannelClientIds(self.sid)
-
-	for k,v in pairs(clients) do
-		if v ~= self.myid then
-			ts3.requestClientKickFromChannel(self.sid, v, "GET THE FUCK OUT BITCH!!!") 
-		end
-	end
-
-end)
-
-command.add("v", function(self, from, args)
-	if util.isNotMe(self.sid, from) then return false end
-
-	local vol = args[1] or -50
-
-	local clients = util.getChannelClientIds(self.sid)
-
-	for k,v in pairs(clients) do
-		if v ~= self.myid then
-			ts3.setClientVolumeModifier(self.sid, v, vol)
-		end
-	end
-
-end)
-
---this hook can be used to setup vars on the client since 
---api is not available at execution time that way you don't
---have to edit TSL.lua and instead can just use this
+-- hooks 
 hook.add("ClientLoaded", "setupVars", function(self)
+	--you can either set the passed in ref "self" or the global "api"
+	self.settingRefVar = "OK"
 
-	self.quietMode = false
-
-
-end)
-
-hook.add("OnClientMove", "clientMove", function(data)
-	
-	local myid = util.getOwnID(data.sid)
-	local mychan = util.getOwnChannel(data.sid)
-	
-	local user = util.getUsernameByID(data.sid, data.clientID)	
-
-	if not api.conf.quietMode then return false end
-
-	if data.newChannelID == mychan and not api:isFriendID(data.sid, data.clientID) then
-		ts3.setClientVolumeModifier(data.sid, data.clientID, -30)
-
-	elseif data.oldChannelID == mychan then	
-		ts3.setClientVolumeModifier(data.sid, data.clientID, 0)
-	end
-
-	if data.clientID == myid then
-		log("Lowering volume of all these goons!")
-		local clients = util.getChannelClientIds(data.sid)
-		for k,v in pairs(clients) do
-			if v ~= myid and not api:isFriendID(data.sid, v) then			
-				ts3.setClientVolumeModifier(data.sid, v, -30)
-			end
-		end
-	end
+	api.settingGlobalVar = "OK"
 
 end)
 
-command.add("quitemode", function(self, from, args)
+hook.add("ClientPoke", "myClientPoke", function(data)
+	if data.message == "test" then
+		return 1
+	else 
+		return 0
+	end
+end)
 
-	self.conf.quietMode = not self.conf.quietMode
 
-	conf.save()
+hook.add("ClientTextMessage", "myClientTextMessage", function(data)
 
-	local status = {
-		enabled = "All noobs have been turned down to -30 volume!",
-		disabled = "All noobs have had your volume restored!"
+end)
+
+
+-- commands
+command.add("test", function(self, fromID, args, message)
+
+	log("USE serverID: " .. self.serverID)
+
+	local serverHash = ts3.getServerVariableAsString(self.serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+	local serverName = ts3.getServerVariableAsString(self.serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_NAME)
+
+	local info = {
+		hash = serverHash,
+		name = serverName
 	}
 
-	local msg = (self.conf.quietMode and "Enabled" or "Disabled") .. " QuiteMode: " .. (self.conf.quietMode and status.enabled or status.disabled)
-	log("[b]" .. msg .. "[/b]")
-	
+	PrintTable(info)
+	PrintTable(self.users.userList)
 
-	local clients = util.getChannelClientIds(self.sid)
-	for k,v in pairs(clients) do
-		
-		local user = util.getUsernameByID(self.sid, v)
+end)
 
-		local vol = (self.conf.quietMode and not self:isFriendID(self.sid, v)) and -30 or 0
-		
-		ts3.setClientVolumeModifier(self.sid, v, vol)		
-		
+command.add("user", function(self, fromID, args, message)
+
+	local id = self.users:findUserID(self.serverID, message)		
+	if not id then 
+		log("Failed to find a user with the name " .. message)
+		return false
 	end
 
-end).addAlias("qm", "quite", "dnd")
+	local data = self.users:getDataFromID(self.serverID, id)
+
+	PrintTable(data)
+
+end)
+
+command.add("who", function(self, fromID, args, message)
+
+	local users = self.users:getAll(self.serverID)
+	local friends = {}
+	local notFriends = {}
+
+	for _,v in pairs(users) do
+		local isFriend = self:isFriendID(self.serverID, v.clientID)
+
+		if isFriend then
+			table.insert(friends, v)
+		else
+			table.insert(notFriends, v)
+		end
+
+		--local friend = isFriend and "[color=green]●[/color]" or "[color=red]●[/color]"
+		--str = str .. friend .. string.format("[color=blue][b][URL=client://0/%s]%s[/URL][/b][/color], ", v.uniqueID, v.username)
+	end
+
+	local str = ""
+
+	log("[b][color=#8c4b93]▬▬▬▬▬ WHO ▬▬▬▬▬[/color][/b]")
+
+	if #friends > 0 then
+		for _,v in pairs(friends) do
+			str = str .. string.format("[b][url=client://0/%s][color=green]%s[/color][/url][/b], ", v.uniqueID, v.username)
+		end
+
+		log("[b]FRIENDS:[/b] " .. str)
+
+		str = ""
+	end
+
+	for _,v in pairs(notFriends) do
+		str = str .. string.format("[b][url=client://0/%s][color=#425482]%s[/color][/url][/b], ", v.uniqueID, v.username)
+	end
+
+	log(str)
+
+end)
+
+-- commands
+command.add("reload", function(self, fromID, args, message)
+
+	--really hacky reload method
+
+	local appdata = string.gsub(util.exec("echo %APPDATA%"), "\n", "")
+	local path = appdata .. "/TS3Client/plugins/lua_plugin/TSL"
+
+	local reloadTSLInit = loadstring(file.read(path .. "/init.lua"))
+
+	reloadTSLInit()
+	
+end)
+
+command.add("ver", function(self, from, args)
+local s = [===[[b][color=#4f4f4f][color=purple]TSL[/color] a framework module for Lua [color=gray][[/color][color=#7a4de2]v%s[/color][color=gray]][/color]
+Created by [color=#db3b3b]Hacksore[/color][/color][/b]]===]
+
+	local str = string.format(s, self.version)
+	log(str)
+
+end).addAlias("about")

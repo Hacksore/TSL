@@ -1,7 +1,4 @@
 {
-	"commandPrefix": [ "!", ".", "-" ],
-	"quietMode": false,
-	"friends": {		
-
-	}
+	"commandPrefix": [ "!", ".", "-" ],	
+	"friends": {}
 }

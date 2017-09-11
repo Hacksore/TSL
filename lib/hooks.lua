@@ -18,9 +18,11 @@ function hook.remove(hookName, hookID, callback)
 
 end
 
+--need to handle multiple args
 function hook.call(hookName, ...)
 
 	local args = {...}
+
 	local hooks = hook.list[hookName] or false
 
 	if not hooks then return false end

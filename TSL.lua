@@ -3,86 +3,120 @@ TSL.__index = TSL
 
 function TSL.create()
 	local self = setmetatable({}, TSL)
-	self.version = "0.0.2"
-	self.name = "TSL"
-	self.sid = ts3.getCurrentServerConnectionHandlerID()
-	self.myid = util.getOwnID()
+	self.version = "1.0.3"
+
+	--server in focus
+	self.serverID = nil
+
+	--this is a silly var as we can have multiple servers
+	--in one instance of a client, consider this deprecated or for the current view tab only
+	self.myid = nil
+
 	self.friends = {}
 	self.conf = {}
-	self.term = false
 	self.loaded = false
-	self.clients = {} -- maybe store this inside of Users class
 
+	self.events = Event.create()
 	self.follow = {}
-
 	self.users = Users.create()
 
-	self:init()
+	--print("running create: " .. )
+	--check your id when the plugin is reloading
+	--if it's not 0 then we are connect to a server and should trigger the reload
+	if util.getOwnID() ~= 0 then		
+		self:init(true)
+	else
+		log("[b][color=red][TSL] Must be on a server to reload![/color][/b]")
+	end
 
 	return self
 end
 
-function TSL:onReload()
-	--called when the plugin is reloaded
-	self.loaded = true
-	Users:registerAll(self.sid)
-
-end
-
-function TSL:init()	
+function TSL:init(isReload)	
 
 	self.conf = conf.load()
+	self.loaded = true
+
+	--set own id
+	self.myid = util.getOwnID()
+
+	--set serverID for active tab
+	self.serverID = ts3.getCurrentServerConnectionHandlerID()
+
+	--we have to do this here otherwise we lose users on reload
+	self.users:registerAll(self.serverID)
+
+	--PrintTable(self.users.userList)
+	if isReload then
+		log("[b][color=purple][TSL][/color] [color=#4c9358]RELOADED[/color][/b]")
+	else
+		log("[b][color=purple][TSL][/color] initialized successfully[/b]")
+	end
 
 end
 
 function TSL:sendMessage(serverID, msg)
 	local chan = util.getOwnChannel(serverID)
+	local sid = serverID == nil and ts3.getCurrentServerConnectionHandlerID() or serverID
 
 	if self.pm and self.pm > 0 then
-		ts3.requestSendPrivateTextMsg(self.sid, msg, self.pm)
+		ts3.requestSendPrivateTextMsg(sid, msg, self.pm)
 	else
-		ts3.requestSendChannelTextMsg(self.sid, msg, chan)
+		ts3.requestSendChannelTextMsg(sid, msg, chan)
 	end
 end
 
 function TSL:sendPrivMessage(msg, id)
 	local chan = util.getOwnChannel()
 
-	ts3.requestSendPrivateTextMsg(self.sid, msg, id)
+	ts3.requestSendPrivateTextMsg(self.serverID, msg, id)
 end
 
-function TSL:addFriend(sid, tab)
+function TSL:updateFriend(serverID, tab)
 
-	if self:isFriend(sid, tab.uid) then return false end
-	
-	if self.conf.friends[sid] == nil then
-		self.conf.friends[sid] = {}
+	local serverHash = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+
+	if self.conf.friends[serverHash] == nil then
+		self.conf.friends[serverHash] = {}
 	end
 
-	self.conf.friends[sid][tab.uid] = {
-		uid = tab.uid,
-		name = tab.name
-	}
+	self.conf.friends[serverHash][tab.uniqueID] = tab
 
 	conf.save()
 	
 	return true
 end
 
-function TSL:delFriend(serverHash, uid)
+function TSL:addFriend(serverID, tab)
 
-	self.conf.friends[serverHash][uid] = nil
+	local serverHash = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+	if self:isFriend(serverID, tab.uniqueID) then return false end
+	
+	if self.conf.friends[serverHash] == nil then
+		self.conf.friends[serverHash] = {}
+	end
 
+	self.conf.friends[serverHash][tab.uniqueID] = tab
+
+	conf.save()
+	
+	return true
+end
+
+function TSL:delFriend(serverID, uniqueID)
+	local serverHash = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+
+	self.conf.friends[serverHash][uniqueID] = nil
 	conf.save()
 	
 end
 
-function TSL:isFriendID(sid, clientID)
-	local uid = ts3.getClientVariableAsString(sid, clientID, ts3defs.ClientProperties.CLIENT_UNIQUE_IDENTIFIER)
-	local serverHash = ts3.getServerVariableAsString(sid, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+function TSL:isFriendID(serverID, clientID)
+	local uniqueID = ts3.getClientVariableAsString(serverID, clientID, ts3defs.ClientProperties.CLIENT_UNIQUE_IDENTIFIER)
+	local serverHash = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
 
 	if self.conf.friends[serverHash] ~= nil then
-		if self.conf.friends[serverHash][uid] ~= nil then
+		if self.conf.friends[serverHash][uniqueID] ~= nil then
 			return true
 		end
 	end
@@ -90,99 +124,14 @@ function TSL:isFriendID(sid, clientID)
 end
 
 -- TODO: have serverHash lookup happen in here as it makes more sense
-function TSL:isFriend(sid, uid)
-	if self.conf.friends[sid] ~= nil then
-		if self.conf.friends[sid][uid] ~= nil then
+function TSL:isFriend(serverID, uniqueID)
+	local serverHash = ts3.getServerVariableAsString(serverID, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
+
+	--broken needs fix
+	if self.conf.friends[serverHash] ~= nil then
+		if self.conf.friends[serverHash][uniqueID] ~= nil then
 			return true
 		end
 	end
 	return false
-end
-
---events
-function TSL:onMessage(sid, toID, fromID, message)
-
-	hook.call("OnMessage", message) -- testing hooks
-
-	local myID = util.getOwnID(sid)
-
-	local args = string.Explode(message, " ")
-
-	local prefix = self.conf.commandPrefix	
-
-	local firstChar = string.sub(message, 1, 1)
-
-	if not table.HasValue(prefix, firstChar) then return false end
-
-	local cmd = string.lower(string.sub(args[1], 2))
-
-	local temp = args
-	table.remove(temp, 1)
-	
-	local id = ts3.getServerVariableAsString(sid, ts3defs.VirtualServerProperties.VIRTUALSERVER_UNIQUE_IDENTIFIER)
-	local uniqueID = ts3.getClientVariableAsString(sid, fromID, ts3defs.ClientProperties.CLIENT_UNIQUE_IDENTIFIER)
-
-
-	if not self:isFriend(id, uniqueID) and fromID ~= myID then return false end
-	
-	command.run(cmd, self, fromID, args)
-
-end
-
-function TSL:onClientMoveEvent(sid, clientID, oldChannelID, newChannelID, visibility, moveMessage)
-
-	self.users:onClientMoveEvent(sid, clientID, oldChannelID, newChannelID, visibility, moveMessage)
-
-	if visibility == 2 then return false end
-
-	local myid = util.getOwnID(sid)
-	local mychan = util.getOwnChannel(sid)
-	local user = util.getUsernameByID(sid, clientID)
-
-	hook.call("OnClientMove", {
-		sid = sid, clientID = clientID, oldChannelID = oldChannelID,
-		newChannelID = newChannelID, visibility = visibility, moveMessage = moveMessage
-	})
-
-	local tab = self.follow[sid]
-	if clientID == tab.id and tab.sid == sid then
-		util.moveToChannelID(sid, newChannelID)		
-	end
-
-end
-
-function TSL:onClientMoveMovedEvent(sid, clientID, oldChannelID, newChannelID, visibility, moverID, moverName, moverUniqueIdentifier, moveMessage)
-	local myid = util.getOwnID()
-	local mychan = util.getOwnChannel()
-	local tab = self.follow[sid]
-
-
-	if clientID == tab.id and tab.sid == sid then
-		util.moveToChannelID(sid, newChannelID)
-	end
-end
-
-function TSL:onServerConnection(serverID, status, errorNumber)
-
-end
-
-function TSL:onChannelSubscribeFinishedEvent(serverID)	
-
-	Users:registerAll(serverID)
-
-end
-
-function TSL:currentServerConnectionChanged(sid)
-	self.sid = sid
-end
-
-function TSL:onClientDisconnected(sid, clientData)
-
-	-- print("Disconnected: " .. clientData.username)
-
-end
-
-function TSL:onClientConnected(sid, clientData)
-	-- print("Connected: " .. clientData.username)
-
 end

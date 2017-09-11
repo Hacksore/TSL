@@ -92,6 +92,7 @@ function util.getOwnID(serverID)
 	local id = serverID and serverID or ts3.getCurrentServerConnectionHandlerID()
 	local myClientID, error = ts3.getClientID(id)
 
+
 	return myClientID
 end
 
@@ -136,12 +137,13 @@ function util.getUserIDByUID(sid, clientID)
 	return nil
 end
 
-function util.getUserID(username)
+function util.findUserID(username)
 	if type(tonumber(username)) == "number" then		
 		return username
 	end
 
 	local l = ts3.getClientList(ts3.getCurrentServerConnectionHandlerID())
+
 	local str = ""
 	for i=1, #l do
 		local name = ts3.getClientVariableAsString(ts3.getCurrentServerConnectionHandlerID(), l[i], ts3defs.ClientProperties.CLIENT_NICKNAME)
@@ -154,13 +156,9 @@ end
 
 --temp fix
 function util.popen(command)
-	local filename = "%temp%/" .. os.tmpname()
-	os.execute(command .." > ".. filename .. "")
-	local file = io.open(filename, "r")
-	local result = file:read("*a")
-	file = io.close()
-	os.execute("rm "..filename)
-	return result
+	local handle = io.popen(command)
+	local result = handle:read("*a")
+	handle:close()
 end
 
 function util.sleep(sec)
@@ -187,7 +185,7 @@ function urlencode(str)
 	return str
 end
 
-function PrintTable( t, indent, done )
+function PrintTable(t, indent, done)
 
 	done = done or {}
 	indent = indent or 0
@@ -228,6 +226,7 @@ function math.clamp(val, lower, upper)
 end
 
 function log(msg)
+	--print(msg)
 	ts3.printMessageToCurrentTab(msg)
 end
 
@@ -313,3 +312,21 @@ end
 function isfunction(val)
 	return type(val) == "function"
 end
+
+
+-- file loader
+function addResourceLocation(path)
+
+	local pluginPath = "%appdata%/TS3Client/plugins/TSL/" .. path
+
+	local dir = util.exec("dir /B \"" .. pluginPath .. "\"")
+
+	print(dir)
+	-- for k,v in pairs(files) do
+
+	-- 	print(k .. "=>" .. v)
+	-- end
+end
+
+
+addResourceLocation("commands")

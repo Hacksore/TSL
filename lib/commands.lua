@@ -36,7 +36,8 @@ function command.run(name, self, from, args)
 		name = command.alias[name]
 	end
 	if command.list[name] ~= nil then
-		command.list[name].callback(self, from, args)
+		local message = table.concat(args, " ")
+		command.list[name].callback(self, from, args, message)
 		return true
 	end
 	return false
